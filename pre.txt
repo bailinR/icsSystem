@@ -1,0 +1,15 @@
+Influencer Collaboration System
+
+简称：ICS
+ics-system
+
+默认创建的是 apps/api/prisma/seed.ts 里的 6 个用户，密码都是 123456：
+
+角色	邮箱	名称
+管理员	admin@example.com	Admin
+外国员工	employee@example.com	Foreign Employee
+直属主管	manager@example.com	Manager
+财务	finance@example.com	Finance
+抄送人	kiki@example.com	Kiki
+抄送人	hailey@example.com	Hailey
+其中 employee@example.com 默认绑定的直属主管是 manager@example.com。
