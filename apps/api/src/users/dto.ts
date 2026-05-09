@@ -3,7 +3,7 @@ import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Matches, MinLength } fr
 
 export class CreateUserDto {
   @IsString()
-  @Matches(/^[^@\s]+$/, { message: 'Account cannot be an email address' })
+  @Matches(/^[^@\s]+$/, { message: '账号不能包含 @，请使用普通账号名' })
   email!: string;
 
   @IsString()
@@ -24,7 +24,7 @@ export class CreateUserDto {
 export class UpdateUserDto {
   @IsOptional()
   @IsString()
-  @Matches(/^[^@\s]+$/, { message: 'Account cannot be an email address' })
+  @Matches(/^[^@\s]+$/, { message: '账号不能包含 @，请使用普通账号名' })
   email?: string;
 
   @IsOptional()

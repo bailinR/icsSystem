@@ -13,3 +13,6 @@ ics-system
 抄送人	kiki@example.com	Kiki
 抄送人	hailey@example.com	Hailey
 其中 employee@example.com 默认绑定的直属主管是 manager@example.com。
+
+bailin_yuangong
+bailin_zhuguan

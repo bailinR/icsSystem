@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseEnumPipe, ParseIntPipe, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FileCategory } from '@prisma/client';
 import { Response } from 'express';
@@ -19,13 +19,24 @@ export class ApplicationsController {
   constructor(private applications: ApplicationsService) {}
 
   @Get()
-  list(@CurrentUser() user: CurrentUser) {
-    return this.applications.list(user);
+  list(
+    @CurrentUser() user: CurrentUser,
+    @Query('statusGroup') statusGroup?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('keyword') keyword?: string,
+  ) {
+    return this.applications.list(user, statusGroup, Number(page || 1), Number(pageSize || 10), keyword);
   }
 
   @Get('todo')
-  todo(@CurrentUser() user: CurrentUser) {
-    return this.applications.todo(user);
+  todo(
+    @CurrentUser() user: CurrentUser,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('keyword') keyword?: string,
+  ) {
+    return this.applications.todo(user, Number(page || 1), Number(pageSize || 10), keyword);
   }
 
   @Post()
@@ -41,6 +52,11 @@ export class ApplicationsController {
   @Patch(':id')
   update(@CurrentUser() user: CurrentUser, @Param('id', ParseIntPipe) id: number, @Body() dto: SaveApplicationDto) {
     return this.applications.update(user, id, dto);
+  }
+
+  @Delete(':id')
+  remove(@CurrentUser() user: CurrentUser, @Param('id', ParseIntPipe) id: number) {
+    return this.applications.remove(user, id);
   }
 
   @Post(':id/submit')
@@ -61,6 +77,11 @@ export class ApplicationsController {
   @Post(':id/withdraw')
   withdraw(@CurrentUser() user: CurrentUser, @Param('id', ParseIntPipe) id: number) {
     return this.applications.withdraw(user, id);
+  }
+
+  @Post(':id/reopen')
+  reopen(@CurrentUser() user: CurrentUser, @Param('id', ParseIntPipe) id: number) {
+    return this.applications.reopen(user, id);
   }
 
   @Post(':id/files/:category')

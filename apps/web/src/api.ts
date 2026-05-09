@@ -11,10 +11,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || '';
+    const isLoginRequest = requestUrl.includes('/auth/login');
+    if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      location.href = '/login';
+      if (location.pathname !== '/login') location.href = '/login';
     }
     return Promise.reject(error);
   },
@@ -35,13 +37,15 @@ export type Application = {
   remark?: string;
   status: AppStatus;
   approvalRound: number;
+  createdAt: string;
+  updatedAt: string;
   applicant: User;
   files: FileItem[];
   tasks: ApprovalTask[];
   actions: ApprovalAction[];
 };
-export type FileItem = { id: number; category: string; originalName: string; mimeType: string; size: number };
-export type ApprovalTask = { id: number; approverId: number; node: string; status: string; comment?: string; decidedAt?: string; approver: User };
+export type FileItem = { id: number; category: string; originalName: string; mimeType: string; size: number; createdAt?: string };
+export type ApprovalTask = { id: number; approverId: number; node: string; status: string; comment?: string; createdAt?: string; decidedAt?: string; approver: User };
 export type ApprovalAction = { id: number; action: string; node?: string; comment?: string; createdAt: string; actor: User };
 
 export function currentUser(): User | null {

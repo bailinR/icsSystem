@@ -1,4 +1,4 @@
-import { IsNumberString, IsOptional, IsString, ValidateIf } from 'class-validator';
+import { IsOptional, IsString, Matches, ValidateIf } from 'class-validator';
 
 export class SaveApplicationDto {
   @IsOptional()
@@ -11,7 +11,7 @@ export class SaveApplicationDto {
 
   @IsOptional()
   @ValidateIf((_, value) => value !== '')
-  @IsNumberString()
+  @Matches(/^\d+(\.\d+)?$/, { message: '合作金额只能输入数字' })
   amount?: string;
 
   @IsOptional()

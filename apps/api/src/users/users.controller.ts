@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { Role } from '@prisma/client';
+import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtGuard } from '../auth/jwt.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -13,8 +14,8 @@ export class UsersController {
 
   @Roles(Role.ADMIN)
   @Get()
-  list() {
-    return this.users.list();
+  list(@Query('page') page?: string, @Query('pageSize') pageSize?: string, @Query('keyword') keyword?: string) {
+    return this.users.list(Number(page || 1), Number(pageSize || 10), keyword);
   }
 
   @Roles(Role.ADMIN)
@@ -31,7 +32,7 @@ export class UsersController {
 
   @Roles(Role.ADMIN)
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
-    return this.users.update(id, dto);
+  update(@CurrentUser() user: CurrentUser, @Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
+    return this.users.update(user, id, dto);
   }
 }

@@ -1,17 +1,282 @@
+html,
+body,
+#app {
+  height: 100%;
+}
+
+:root {
+  --status-success: #22c55e;
+  --status-danger: #ef4444;
+  --status-progress: #f59e0b;
+  --status-muted: #9ca3af;
+  --text-strong: #111827;
+  --text-normal: #374151;
+  --text-subtle: #6b7280;
+  --surface-page: #f7f8fa;
+  --surface-panel: #ffffff;
+  --surface-soft: #f9fafb;
+  --border-subtle: #e5e7eb;
+  --border-strong: #d1d5db;
+  --shadow-panel: 0 1px 2px rgba(17, 24, 39, 0.04), 0 12px 32px rgba(17, 24, 39, 0.06);
+  --radius-panel: 10px;
+  --radius-control: 8px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #f7efe1 0%, #e8f4ed 45%, #f8fbff 100%);
-  color: #263238;
-  font-family: "Aptos", "Segoe UI", sans-serif;
+  overflow: hidden;
+  background: var(--surface-page);
+  color: var(--text-normal);
+  font-family: Inter, "Aptos", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.stable-text,
+.el-button > span,
+.el-menu-item,
+.el-table .cell,
+.el-tag__content,
+.el-radio-button__inner {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.el-button > span,
+.el-tag__content,
+.el-radio-button__inner {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.el-button {
+  min-width: 88px;
+  justify-content: center;
+  border-radius: var(--radius-control);
+  font-weight: 600;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--text-strong);
+  --el-button-border-color: var(--text-strong);
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: var(--text-normal);
+  --el-button-hover-border-color: var(--text-normal);
+  --el-button-active-bg-color: var(--text-strong);
+  --el-button-active-border-color: var(--text-strong);
+}
+
+.el-button--success {
+  --el-button-bg-color: var(--status-success);
+  --el-button-border-color: var(--status-success);
+  --el-button-hover-bg-color: var(--status-success);
+  --el-button-hover-border-color: var(--status-success);
+}
+
+.el-button--danger {
+  --el-button-bg-color: var(--status-danger);
+  --el-button-border-color: var(--status-danger);
+  --el-button-hover-bg-color: var(--status-danger);
+  --el-button-hover-border-color: var(--status-danger);
+}
+
+.el-button.is-text.el-button--primary {
+  color: var(--text-strong);
+}
+
+.el-button.is-text.el-button--danger {
+  color: var(--status-danger);
+}
+
+.el-button.is-text {
+  min-width: 58px;
+}
+
+.el-button--large {
+  min-width: 132px;
+}
+
+.el-tag {
+  box-sizing: border-box;
+  justify-content: center;
+  min-width: 72px;
+  max-width: 100%;
+  border-color: transparent;
+  background: transparent;
+}
+
+.el-tag--success {
+  --el-tag-text-color: var(--status-success);
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: transparent;
+}
+
+.el-tag--danger {
+  --el-tag-text-color: var(--status-danger);
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: transparent;
+}
+
+.el-tag--warning {
+  --el-tag-text-color: var(--status-progress);
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: transparent;
+}
+
+.el-tag--info {
+  --el-tag-text-color: var(--status-muted);
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: transparent;
+}
+
+.el-radio-button__inner {
+  min-width: 92px;
+  border-color: var(--border-subtle);
+  background: var(--surface-panel);
+  color: var(--text-normal);
+}
+
+.el-radio-button__original-radio:checked + .el-radio-button__inner {
+  border-color: var(--text-strong);
+  background: var(--text-strong);
+  color: #fff;
+  box-shadow: none;
+}
+
+.el-card__header {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.el-card__header > * {
+  width: 100%;
+  min-width: 0;
+}
+
+.el-card__body {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.el-table {
+  width: 100%;
+  table-layout: fixed;
+  overflow: hidden;
+  --el-table-border-color: var(--border-subtle);
+  --el-table-header-bg-color: var(--surface-soft);
+  --el-table-header-text-color: var(--text-subtle);
+  --el-table-row-hover-bg-color: #f9fafb;
+  color: var(--text-normal);
+}
+
+.el-table th.el-table__cell > .cell {
+  line-height: 20px;
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.el-table td.el-table__cell {
+  border-bottom-color: var(--border-subtle);
+  text-align: center;
+}
+
+.el-table .cell {
+  text-align: center;
+}
+
+.el-table .el-tag {
+  margin: 0 auto;
+}
+
+.el-pagination {
+  max-width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: 6px;
+  --el-pagination-button-width: 28px;
+  --el-pagination-button-height: 28px;
+}
+
+.el-pagination .el-pagination__sizes {
+  margin-right: 4px;
+}
+
+.el-pagination .el-pagination__jump {
+  margin-left: 4px;
+}
+
+.el-pagination .el-select {
+  width: 96px;
+}
+
+.el-pagination .el-input__wrapper {
+  min-width: 0;
+}
+
+.el-form--label-top .el-form-item__label {
+  width: 100%;
+  min-height: 22px;
+  line-height: 22px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: var(--radius-control);
+  box-shadow: 0 0 0 1px var(--border-subtle) inset;
+}
+
+.el-input__wrapper:hover,
+.el-textarea__inner:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px var(--border-strong) inset;
+}
+
+.el-dialog {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--border-subtle);
+  margin-right: 0;
+  padding: 18px 20px;
+}
+
+.el-dialog__body {
+  padding: 20px;
 }
 
 .page-card {
-  border: 0;
-  border-radius: 22px;
-  box-shadow: 0 20px 70px rgba(56, 75, 91, 0.12);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+  min-width: 0;
+  overflow: hidden;
+  background: var(--surface-panel);
 }
 
 .muted {
-  color: #7a8a99;
+  color: var(--text-subtle);
 }

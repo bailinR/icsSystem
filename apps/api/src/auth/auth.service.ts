@@ -15,9 +15,12 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (!user || !user.isActive) throw new UnauthorizedException('Invalid credentials');
+    if (!user) throw new UnauthorizedException('账号或密码不正确');
+    if (!user.isActive) throw new UnauthorizedException('账号已被停用');
+
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
-    if (!ok) throw new UnauthorizedException('Invalid credentials');
+    if (!ok) throw new UnauthorizedException('账号或密码不正确');
+
     const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
     const token = await this.jwt.signAsync(payload, {
       secret: this.config.get('JWT_SECRET') || 'dev-secret',

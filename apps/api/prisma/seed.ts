@@ -10,7 +10,8 @@ async function migrateLegacyDefaultAccounts() {
     ['finance@example.com', 'finance'],
     ['kiki@example.com', 'kiki'],
     ['hailey@example.com', 'hailey'],
-    ['employee@example.com', 'employee'],
+    ['employee@example.com', 'Jessica'],
+    ['employee', 'Jessica'],
   ];
 
   for (const [legacy, account] of legacyAccounts) {
@@ -39,12 +40,12 @@ async function upsertUser(email: string, name: string, role: Role, managerId?: n
 
 async function main() {
   await migrateLegacyDefaultAccounts();
-  const admin = await upsertUser('admin', 'Admin', Role.ADMIN);
-  const manager = await upsertUser('manager', 'Manager', Role.MANAGER);
-  await upsertUser('finance', 'Finance', Role.FINANCE);
-  await upsertUser('kiki', 'Kiki', Role.CC);
-  await upsertUser('hailey', 'Hailey', Role.CC);
-  await upsertUser('employee', 'Foreign Employee', Role.EMPLOYEE, manager.id);
+  const admin = await upsertUser('admin', '管理员', Role.ADMIN);
+  const manager = await upsertUser('manager', '陈主管', Role.MANAGER);
+  await upsertUser('finance', '李财务', Role.FINANCE);
+  await upsertUser('kiki', 'kiki', Role.CC);
+  await upsertUser('hailey', 'hailey', Role.CC);
+  await upsertUser('Jessica', 'Jessica', Role.EMPLOYEE, manager.id);
   console.log(`Seeded users. Admin id: ${admin.id}`);
 }
 
