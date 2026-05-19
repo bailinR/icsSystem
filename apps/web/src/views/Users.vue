@@ -169,13 +169,13 @@ onMounted(load);
 
   <el-dialog v-model="dialog" :title="t('usersPage.dialogTitle')" width="560px" align-center>
     <el-form label-position="top">
-      <el-form-item :label="t('fields.name')">
+      <el-form-item :label="t('fields.name')" required>
         <el-input v-model="form.name" :placeholder="t('placeholders.name')" />
       </el-form-item>
-      <el-form-item :label="t('fields.account')">
+      <el-form-item :label="t('fields.account')" required>
         <el-input v-model="form.email" :placeholder="t('placeholders.account')" />
       </el-form-item>
-      <el-form-item :label="t('fields.role')">
+      <el-form-item :label="t('fields.role')" required>
         <el-select v-model="form.role">
           <el-option :label="t('roles.ADMIN')" value="ADMIN" />
           <el-option :label="t('roles.EMPLOYEE')" value="EMPLOYEE" />
@@ -184,12 +184,12 @@ onMounted(load);
           <el-option :label="t('roles.CC')" value="CC" />
         </el-select>
       </el-form-item>
-      <el-form-item v-if="form.role === 'EMPLOYEE'" :label="t('fields.manager')">
+      <el-form-item v-if="form.role === 'EMPLOYEE'" :label="t('fields.manager')" required>
         <el-select v-model="form.managerId" :placeholder="t('placeholders.manager')">
           <el-option v-for="m in managers" :key="m.id" :label="m.name" :value="m.id" />
         </el-select>
       </el-form-item>
-      <el-form-item :label="t('fields.password')">
+      <el-form-item :label="t('fields.password')" :required="!form.id">
         <el-input v-model="form.password" show-password :placeholder="form.id ? t('placeholders.passwordUnchanged') : t('placeholders.password')" />
       </el-form-item>
       <el-form-item :label="t('fields.enabled')">

@@ -21,14 +21,50 @@ const canApprove = computed(() => app.value?.tasks?.some((task) => task.approver
 const canPreview = (mime: string) => mime.startsWith('image/') || mime === 'application/pdf';
 
 const categoryKeys: Record<string, string> = {
+  HOMEPAGE: 'files.homepage',
   CHAT_RECORD: 'files.chat',
   VOUCHER: 'files.voucher',
   CONTRACT: 'files.contract',
   OTHER: 'files.other',
 };
+type ApprovalFlowTimelineItem = {
+  key: string;
+  title: string;
+  names: string[];
+  status: 'success' | 'danger' | 'progress' | 'muted';
+  statusText: string;
+  color: string;
+};
 
 const currentTask = computed(() => app.value?.tasks?.find((task) => task.status === 'PENDING'));
 const submittedAction = computed(() => [...(app.value?.actions || [])].reverse().find((item) => ['SUBMITTED', 'RESUBMITTED'].includes(item.action)));
+const approvalFlowTimelineItems = computed(() => {
+  if (!app.value?.approvalFlow) return [];
+  const items: ApprovalFlowTimelineItem[] = [];
+  if (!submittedAction.value) {
+    items.push({
+      key: 'flow-SUBMIT',
+      title: t('actions.SUBMITTED'),
+      names: [app.value.applicant.name],
+      status: 'muted',
+      statusText: t('flow.notStarted'),
+      color: '#9ca3af',
+    });
+  }
+  items.push(...[
+    buildApprovalTimelineItem('MANAGER', app.value.approvalFlow.manager.approvers, app.value.approvalFlow.manager.tasks),
+    buildApprovalTimelineItem('FINANCE', app.value.approvalFlow.finance.approvers, app.value.approvalFlow.finance.tasks),
+  ].filter((item): item is ApprovalFlowTimelineItem => Boolean(item)));
+  items.push({
+    key: 'flow-CC',
+    title: t('flow.ccTitle'),
+    names: app.value.approvalFlow.cc.approvers.map((item) => item.name),
+    status: app.value.status === 'APPROVED' ? 'success' : 'muted',
+    statusText: app.value.status === 'APPROVED' ? t('flow.ccSent') : t('flow.ccPending'),
+    color: app.value.status === 'APPROVED' ? '#22c55e' : '#9ca3af',
+  });
+  return items;
+});
 const filteredFiles = computed(() => {
   const keyword = fileKeyword.value.trim().toLowerCase();
   return (app.value?.files || []).filter((file) => {
@@ -44,8 +80,32 @@ const filteredFiles = computed(() => {
 function timelineColor(item: ApprovalAction) {
   if (item.action === 'APPROVED') return '#22c55e';
   if (item.action === 'REJECTED') return '#ef4444';
-  if (item.action === 'WITHDRAWN') return '#9ca3af';
-  return '#9ca3af';
+  return '#111827';
+}
+
+function buildApprovalTimelineItem(
+  node: 'MANAGER' | 'FINANCE',
+  approvers: Array<{ name: string }>,
+  tasks: Array<{ status: string; approver?: { name: string } }>,
+): ApprovalFlowTimelineItem | undefined {
+  if (node === 'MANAGER' && !approvers.length && !tasks.length) return undefined;
+  const decidedByHistory = app.value?.actions.some((item) => item.node === node && ['APPROVED', 'REJECTED'].includes(item.action));
+  if (decidedByHistory) return undefined;
+  const rejected = tasks.some((task) => task.status === 'REJECTED');
+  const pending = tasks.some((task) => task.status === 'PENDING');
+  const approved = tasks.some((task) => task.status === 'APPROVED');
+  const status = rejected ? 'danger' : approved ? 'success' : pending ? 'progress' : 'muted';
+  const statusKey = rejected ? 'rejected' : approved ? 'completed' : pending ? 'current' : 'notStarted';
+  const color = rejected ? '#ef4444' : approved ? '#22c55e' : pending ? '#f59e0b' : '#9ca3af';
+  const names = [...new Set([...tasks.map((task) => task.approver?.name).filter(Boolean), ...approvers.map((item) => item.name)])] as string[];
+  return {
+    key: `flow-${node}`,
+    title: pending ? t('timelineTitles.NODE_PENDING', { node: t(`nodes.${node}`) }) : t('flow.approvalTitle', { node: t(`nodes.${node}`) }),
+    names,
+    status,
+    statusText: t(`flow.${statusKey}`),
+    color,
+  };
 }
 
 function actionTone(item: ApprovalAction) {
@@ -57,7 +117,7 @@ function actionTone(item: ApprovalAction) {
 function displayFileName(name: string) {
   try {
     const decoded = decodeURIComponent(escape(name));
-    return decoded.includes('�') ? name : decoded;
+    return decoded.includes('\uFFFD') ? name : decoded;
   } catch {
     return name;
   }
@@ -116,7 +176,6 @@ function actionComment(item: ApprovalAction) {
   if (!item.comment) return '';
   if (item.action === 'APPROVED') return t('detail.approvalRemarkPrefix', { comment: item.comment });
   if (item.action === 'REJECTED') return t('detail.rejectReasonPrefix', { comment: item.comment });
-  if (item.comment === '没有可用主管，已直接进入财务审批') return t('systemComments.noManagerToFinance');
   if (item.comment === '没有可用主管，已直接进入财务审批') return t('systemComments.noManagerToFinance');
   if (item.comment === '重新提交为草稿') return t('systemComments.reopenedDraft');
   return item.comment;
@@ -269,7 +328,6 @@ onBeforeUnmount(() => {
         <dl class="info-list">
           <div><dt>{{ t('fields.contact') }}</dt><dd>{{ app.contact || '-' }}</dd></div>
           <div><dt>{{ t('fields.paymentMethod') }}</dt><dd>{{ app.paymentMethod || '-' }}</dd></div>
-          <div><dt>{{ t('fields.homepage') }}</dt><dd><a v-if="app.homepage" :href="app.homepage" target="_blank">{{ app.homepage }}</a><span v-else>-</span></dd></div>
           <div><dt>{{ t('fields.createdAt') }}</dt><dd>{{ formatDate(app.createdAt) }}</dd></div>
           <div class="full-row"><dt>{{ t('fields.remark') }}</dt><dd>{{ app.remark || '-' }}</dd></div>
         </dl>
@@ -293,13 +351,17 @@ onBeforeUnmount(() => {
               <p v-if="actionComment(item)" class="timeline-note">{{ actionComment(item) }}</p>
             </div>
           </el-timeline-item>
-          <el-timeline-item v-if="currentTask" color="#f59e0b" placement="top">
-            <div class="timeline-card action-PENDING">
+          <el-timeline-item
+            v-for="item in approvalFlowTimelineItems"
+            :key="item.key"
+            :color="item.color"
+            placement="top"
+          >
+            <div :class="['timeline-card', 'action-FLOW', `flow-${item.status}`]">
               <div class="timeline-header">
-                <strong class="timeline-title action-title-progress">{{ pendingTimelineTitle() }}</strong>
+                <strong :class="['timeline-title', `action-title-${item.status}`]">{{ item.title }}</strong>
               </div>
-              <p class="timeline-time">{{ formatDate(currentTask.createdAt) }}</p>
-              <p class="timeline-desc">{{ currentTask.approver?.name || '-' }}</p>
+              <p class="timeline-time">{{ item.names.length ? `${item.names.join(' / ')} ${item.statusText}` : item.statusText }}</p>
             </div>
           </el-timeline-item>
         </el-timeline>
@@ -313,10 +375,8 @@ onBeforeUnmount(() => {
         <div class="file-tools">
           <el-select v-model="category" class="category-select">
             <el-option :label="t('common.all')" value="ALL" />
-            <el-option :label="t('files.chat')" value="CHAT_RECORD" />
-            <el-option :label="t('files.voucher')" value="VOUCHER" />
-            <el-option :label="t('files.contract')" value="CONTRACT" />
-            <el-option :label="t('files.other')" value="OTHER" />
+            <el-option :label="t('files.homepage')" value="HOMEPAGE" />
+            <el-option :label="t('files.materials')" value="OTHER" />
           </el-select>
           <el-input v-model="fileKeyword" clearable class="file-search" :placeholder="t('placeholders.searchFiles')" />
         </div>
@@ -376,6 +436,7 @@ onBeforeUnmount(() => {
   min-width: 88px;
 }
 .summary-panel,
+.flow-panel,
 .info-panel,
 .attachments-panel {
   border: 1px solid var(--border-subtle);
@@ -436,6 +497,87 @@ onBeforeUnmount(() => {
 .approval-actions :deep(.el-button) {
   width: 92px;
   min-width: 92px;
+}
+.flow-panel {
+  padding: 16px;
+}
+.flow-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.flow-step {
+  display: flex;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+.flow-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--status-muted);
+  flex: 0 0 auto;
+}
+.flow-content {
+  min-width: 0;
+  flex: 1;
+}
+.flow-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.flow-head strong,
+.flow-head span,
+.flow-content p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.flow-head strong {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+.flow-head span {
+  color: var(--status-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.flow-content p {
+  margin: 8px 0 0;
+  color: var(--text-normal);
+  font-size: 13px;
+}
+.flow-success .flow-dot {
+  background: var(--status-success);
+}
+.flow-success .flow-head span {
+  color: var(--status-success);
+}
+.flow-danger .flow-dot {
+  background: var(--status-danger);
+}
+.flow-danger .flow-head span {
+  color: var(--status-danger);
+}
+.flow-progress .flow-dot {
+  background: var(--status-progress);
+}
+.flow-progress .flow-head span {
+  color: var(--status-progress);
+}
+.flow-muted .flow-head strong,
+.flow-muted .flow-content p {
+  color: var(--status-muted);
 }
 .status-text {
   min-height: 22px;
@@ -560,7 +702,15 @@ onBeforeUnmount(() => {
 .action-title-progress {
   color: var(--status-progress);
 }
+.action-title-muted {
+  color: var(--status-muted);
+}
 .action-title-normal {
+  color: var(--text-strong);
+}
+.timeline-card.flow-muted .timeline-title,
+.timeline-card.flow-muted .timeline-time,
+.timeline-card.flow-muted .timeline-desc {
   color: var(--status-muted);
 }
 .timeline-time {
@@ -669,18 +819,30 @@ onBeforeUnmount(() => {
   display: grid;
   place-items: center;
   min-height: 68vh;
+  max-height: 78vh;
+  overflow: auto;
+  padding: 16px;
   background: #111827;
 }
-.preview-body img,
 .preview-body iframe {
   width: 100%;
   height: 68vh;
   border: 0;
+}
+.preview-body img {
+  display: block;
+  max-width: 100%;
+  max-height: 74vh;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
   object-fit: contain;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
 }
 @media (max-width: 1180px) {
   .summary-panel,
-  .detail-workspace {
+  .detail-workspace,
+  .flow-steps {
     grid-template-columns: 1fr;
   }
   .attachments-panel {

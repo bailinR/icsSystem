@@ -43,10 +43,16 @@ export type Application = {
   files: FileItem[];
   tasks: ApprovalTask[];
   actions: ApprovalAction[];
+  approvalFlow?: ApprovalFlow;
 };
 export type FileItem = { id: number; category: string; originalName: string; mimeType: string; size: number; createdAt?: string };
 export type ApprovalTask = { id: number; approverId: number; node: string; status: string; comment?: string; createdAt?: string; decidedAt?: string; approver: User };
 export type ApprovalAction = { id: number; action: string; node?: string; comment?: string; createdAt: string; actor: User };
+export type ApprovalFlow = {
+  manager: { node: 'MANAGER'; approvers: Array<Pick<User, 'id' | 'name'>>; tasks: ApprovalTask[] };
+  finance: { node: 'FINANCE'; approvers: Array<Pick<User, 'id' | 'name'>>; tasks: ApprovalTask[] };
+  cc: { approvers: Array<Pick<User, 'id' | 'name'>> };
+};
 
 export function currentUser(): User | null {
   const raw = localStorage.getItem('user');

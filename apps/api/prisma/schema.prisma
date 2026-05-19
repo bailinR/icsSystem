@@ -47,6 +47,7 @@ enum ActionType {
 }
 
 enum FileCategory {
+  HOMEPAGE
   CHAT_RECORD
   VOUCHER
   CONTRACT

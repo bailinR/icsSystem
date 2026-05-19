@@ -31,10 +31,10 @@ async function login() {
       <h1>ICS</h1>
       <p class="muted">{{ t('login.subtitle') }}</p>
       <el-form label-position="top" @keyup.enter="login">
-        <el-form-item :label="t('fields.account')">
+        <el-form-item :label="t('fields.account')" required>
           <el-input v-model="form.email" />
         </el-form-item>
-        <el-form-item :label="t('fields.password')">
+        <el-form-item :label="t('fields.password')" required>
           <el-input v-model="form.password" show-password type="password" />
         </el-form-item>
         <el-button class="login-button" type="primary" size="large" :loading="loading" @click="login">{{ t('login.button') }}</el-button>

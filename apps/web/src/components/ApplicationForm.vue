@@ -4,7 +4,7 @@ import { reactive, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { Application } from '../api';
 
-type FileCategory = 'CHAT_RECORD' | 'VOUCHER' | 'CONTRACT' | 'OTHER';
+type FileCategory = 'HOMEPAGE' | 'CHAT_RECORD' | 'VOUCHER' | 'CONTRACT' | 'OTHER';
 export type PendingFiles = Record<FileCategory, UploadUserFile[]>;
 
 const props = defineProps<{ model?: Partial<Application> }>();
@@ -19,10 +19,10 @@ const form = reactive({
   amount: '',
   currency: '',
   paymentMethod: '',
-  homepage: '',
   remark: '',
 });
 const files = reactive<PendingFiles>({
+  HOMEPAGE: [],
   CHAT_RECORD: [],
   VOUCHER: [],
   CONTRACT: [],
@@ -30,10 +30,8 @@ const files = reactive<PendingFiles>({
 });
 
 const uploadGroups = [
-  { key: 'CHAT_RECORD', labelKey: 'files.chat', accept: 'image/jpeg,image/png', hintKey: 'files.imageOnly' },
-  { key: 'VOUCHER', labelKey: 'files.voucher', accept: 'image/jpeg,image/png', hintKey: 'files.imageOnly' },
-  { key: 'CONTRACT', labelKey: 'files.contract', accept: 'image/jpeg,image/png,application/pdf', hintKey: 'files.imageOrPdf' },
-  { key: 'OTHER', labelKey: 'files.other', accept: 'image/jpeg,image/png,application/pdf,.doc,.docx,.xls,.xlsx', hintKey: 'files.office' },
+  { key: 'HOMEPAGE', labelKey: 'files.homepage', accept: 'image/jpeg,image/png', hintKey: 'files.imageOnly' },
+  { key: 'OTHER', labelKey: 'files.materials', accept: 'image/jpeg,image/png,application/pdf,.doc,.docx,.xls,.xlsx', hintKey: 'files.materialsHint' },
 ] as const;
 
 function resetFiles(model?: Partial<Application>) {
@@ -43,6 +41,7 @@ function resetFiles(model?: Partial<Application>) {
   for (const file of model?.files || []) {
     const category = file.category as FileCategory;
     if (!files[category]) continue;
+    if (files[category].length) continue;
     files[category].push({
       name: file.originalName,
       uid: -file.id,
@@ -66,8 +65,18 @@ function onAmountInput(value: string) {
 }
 
 function saveForm() {
-  if (form.amount && !amountPattern.test(form.amount)) {
+  const missingField = ['influencerName', 'contact', 'amount', 'currency', 'paymentMethod'].find((key) => !String(form[key as keyof typeof form] || '').trim());
+  if (missingField) {
+    ElMessage.error(t('validation.applicationRequired'));
+    return;
+  }
+  if (!amountPattern.test(form.amount)) {
     ElMessage.error(t('validation.amountNumber'));
+    return;
+  }
+  const missingFileGroup = uploadGroups.find((group) => !files[group.key].length);
+  if (missingFileGroup) {
+    ElMessage.error(t('validation.fileRequired', { field: t(missingFileGroup.labelKey) }));
     return;
   }
   emit('save', form, files);
@@ -82,7 +91,6 @@ watch(
       amount: model?.amount ? String(model.amount) : '',
       currency: model?.currency || '',
       paymentMethod: model?.paymentMethod || '',
-      homepage: model?.homepage || '',
       remark: model?.remark || '',
     });
     resetFiles(model);
@@ -93,13 +101,13 @@ watch(
 
 <template>
   <el-form label-position="top" class="grid">
-    <el-form-item :label="t('fields.influencerName')">
+    <el-form-item :label="t('fields.influencerName')" required>
       <el-input v-model="form.influencerName" />
     </el-form-item>
-    <el-form-item :label="t('fields.contact')">
+    <el-form-item :label="t('fields.contact')" required>
       <el-input v-model="form.contact" />
     </el-form-item>
-    <el-form-item :label="t('fields.cooperationAmount')">
+    <el-form-item :label="t('fields.cooperationAmount')" required>
       <el-input
         v-model="form.amount"
         inputmode="decimal"
@@ -107,16 +115,13 @@ watch(
         @input="onAmountInput"
       />
     </el-form-item>
-    <el-form-item :label="t('fields.currency')">
+    <el-form-item :label="t('fields.currency')" required>
       <el-select v-model="form.currency" filterable clearable :placeholder="t('placeholders.currency')">
         <el-option v-for="currency in currencies" :key="currency" :label="currency" :value="currency" />
       </el-select>
     </el-form-item>
-    <el-form-item :label="t('fields.paymentMethod')">
+    <el-form-item :label="t('fields.paymentMethod')" required>
       <el-input v-model="form.paymentMethod" />
-    </el-form-item>
-    <el-form-item :label="t('fields.homepage')">
-      <el-input v-model="form.homepage" />
     </el-form-item>
     <el-form-item :label="t('fields.remark')" class="full">
       <el-input v-model="form.remark" type="textarea" :rows="4" />
@@ -126,9 +131,10 @@ watch(
       <h3>{{ t('files.title') }}</h3>
       <p class="muted">{{ t('files.note') }}</p>
       <div class="upload-grid">
-        <el-form-item v-for="group in uploadGroups" :key="group.key">
+        <el-form-item v-for="group in uploadGroups" :key="group.key" class="upload-form-item">
           <template #label>
             <span class="attachment-label">
+              <span class="required-mark">*</span>
               {{ t(group.labelKey) }}
               <span class="attachment-hint">({{ t(group.hintKey) }})</span>
             </span>
@@ -137,7 +143,7 @@ watch(
             v-model:file-list="files[group.key]"
             :auto-upload="false"
             :accept="group.accept"
-            multiple
+            :limit="1"
             class="file-upload"
           >
             <el-button>{{ t('files.choose') }}</el-button>
@@ -217,6 +223,11 @@ watch(
   color: var(--text-subtle);
   font-size: 12px;
   font-weight: 400;
+}
+.required-mark {
+  margin-right: 4px;
+  color: var(--status-danger);
+  font-weight: 700;
 }
 :deep(.file-upload) {
   width: 100%;

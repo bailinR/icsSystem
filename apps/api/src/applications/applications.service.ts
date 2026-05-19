@@ -29,6 +29,11 @@ const statusGroups: Record<string, ApplicationStatus[]> = {
   withdrawn: [ApplicationStatus.WITHDRAWN],
 };
 
+const requiredFileCategories: FileCategory[] = [
+  FileCategory.HOMEPAGE,
+  FileCategory.OTHER,
+];
+
 function normalizeOriginalName(name: string) {
   const decoded = Buffer.from(name, 'latin1').toString('utf8');
   return decoded.includes('�') ? name : decoded;
@@ -151,13 +156,19 @@ export class ApplicationsService {
     return { success: true };
   }
 
-  detail(user: CurrentUser, id: number) {
-    return this.findVisible(user, id);
+  async detail(user: CurrentUser, id: number) {
+    const app = await this.findVisible(user, id);
+    return {
+      ...app,
+      approvalFlow: await this.approvalFlow(app),
+    };
   }
 
   async submit(user: CurrentUser, id: number) {
     const app = await this.findVisible(user, id);
     if (app.applicantId !== user.id && user.role !== Role.ADMIN) throw new ForbiddenException();
+    this.assertApplicationInfoComplete(app);
+    this.assertRequiredFilesComplete(app.files);
 
     const applicant = await this.prisma.user.findUnique({ where: { id: app.applicantId }, select: { managerId: true } });
     if (!applicant) throw new NotFoundException();
@@ -293,6 +304,7 @@ export class ApplicationsService {
     const wordTypes = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     const excelTypes = ['application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
     const allowedByCategory: Record<FileCategory, string[]> = {
+      [FileCategory.HOMEPAGE]: imageTypes,
       [FileCategory.CHAT_RECORD]: imageTypes,
       [FileCategory.VOUCHER]: imageTypes,
       [FileCategory.CONTRACT]: [...imageTypes, ...pdfTypes],
@@ -303,12 +315,12 @@ export class ApplicationsService {
       await unlink(file.path).catch(() => undefined);
       throw new BadRequestException('Unsupported file type or size');
     }
-    if (file.mimetype.startsWith('image/')) {
-      const count = await this.prisma.applicationFile.count({ where: { applicationId: id, mimeType: { startsWith: 'image/' } } });
-      if (count >= 10) {
-        await unlink(file.path).catch(() => undefined);
-        throw new BadRequestException('Only 10 images are allowed');
-      }
+    const existingFiles = await this.prisma.applicationFile.findMany({ where: { applicationId: id, category } });
+    for (const existing of existingFiles) {
+      await unlink(existing.path).catch(() => undefined);
+    }
+    if (existingFiles.length) {
+      await this.prisma.applicationFile.deleteMany({ where: { id: { in: existingFiles.map((item) => item.id) } } });
     }
     return this.prisma.applicationFile.create({
       data: {
@@ -392,8 +404,44 @@ export class ApplicationsService {
       amount: dto.amount ? dto.amount : null,
       currency: dto.currency || null,
       paymentMethod: dto.paymentMethod || null,
-      homepage: dto.homepage || null,
+      homepage: null,
       remark: dto.remark || null,
+    };
+  }
+
+  private assertApplicationInfoComplete(app: Awaited<ReturnType<ApplicationsService['findVisible']>>) {
+    if (!app.influencerName || !app.contact || !app.amount || !app.currency || !app.paymentMethod) {
+      throw new BadRequestException('Application information is incomplete');
+    }
+  }
+
+  private assertRequiredFilesComplete(files: Array<{ category: FileCategory }>) {
+    const uploadedCategories = new Set(files.map((file) => file.category));
+    if (requiredFileCategories.some((category) => !uploadedCategories.has(category))) {
+      throw new BadRequestException('Required files are incomplete');
+    }
+  }
+
+  private async approvalFlow(app: Awaited<ReturnType<ApplicationsService['findVisible']>>) {
+    const manager = await this.findNextActiveManager(app.applicant.managerId);
+    const financeUsers = await this.activeFinanceUsers();
+    const ccUsers = await this.ccUsers();
+    const managerTasks = app.tasks.filter((task) => task.node === ApprovalNode.MANAGER && task.status !== TaskStatus.CANCELLED);
+    const financeTasks = app.tasks.filter((task) => task.node === ApprovalNode.FINANCE && task.status !== TaskStatus.CANCELLED);
+    return {
+      manager: {
+        node: ApprovalNode.MANAGER,
+        approvers: manager ? [manager] : [],
+        tasks: managerTasks,
+      },
+      finance: {
+        node: ApprovalNode.FINANCE,
+        approvers: financeUsers,
+        tasks: financeTasks,
+      },
+      cc: {
+        approvers: ccUsers,
+      },
     };
   }
 
@@ -404,25 +452,30 @@ export class ApplicationsService {
       visited.add(currentId);
       const manager = await this.prisma.user.findUnique({
         where: { id: currentId },
-        select: { id: true, managerId: true, isActive: true, role: true },
+        select: { id: true, name: true, managerId: true, isActive: true, role: true },
       });
       if (!manager) return null;
-      if (manager.isActive && (manager.role === Role.MANAGER || manager.role === Role.ADMIN)) return { id: manager.id };
+      if (manager.isActive && (manager.role === Role.MANAGER || manager.role === Role.ADMIN)) return { id: manager.id, name: manager.name };
       currentId = manager.managerId || undefined;
     }
     return null;
   }
 
   private activeFinanceUsers() {
-    return this.prisma.user.findMany({ where: { role: Role.FINANCE, isActive: true }, select: { id: true } });
+    return this.prisma.user.findMany({ where: { role: Role.FINANCE, isActive: true }, select: { id: true, name: true } });
   }
 
   private async ccUserIds() {
-    const users = await this.prisma.user.findMany({
-      where: { OR: [{ email: 'kiki' }, { email: 'hailey' }, { role: Role.CC }], isActive: true },
-      select: { id: true },
-    });
+    const users = await this.ccUsers();
     return users.map((user) => user.id);
+  }
+
+  private ccUsers() {
+    return this.prisma.user.findMany({
+      where: { OR: [{ email: 'kiki' }, { email: 'hailey' }, { role: Role.CC }], isActive: true },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
   }
 
   private async notifyCc(title: string, body: string, applicationId: number) {

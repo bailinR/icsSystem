@@ -240,6 +240,11 @@ body {
   font-weight: 600;
 }
 
+.el-form-item.is-required .el-form-item__label::before,
+.el-form-item.is-required .el-form-item__label::after {
+  color: var(--status-danger) !important;
+}
+
 .el-input__wrapper,
 .el-textarea__inner,
 .el-select__wrapper {

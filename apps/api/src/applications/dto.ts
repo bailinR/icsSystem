@@ -1,33 +1,28 @@
-import { IsOptional, IsString, Matches, ValidateIf } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
 export class SaveApplicationDto {
-  @IsOptional()
   @IsString()
-  influencerName?: string;
+  @IsNotEmpty()
+  influencerName!: string;
 
-  @IsOptional()
   @IsString()
-  contact?: string;
+  @IsNotEmpty()
+  contact!: string;
 
-  @IsOptional()
-  @ValidateIf((_, value) => value !== '')
-  @Matches(/^\d+(\.\d+)?$/, { message: '合作金额只能输入数字' })
-  amount?: string;
+  @Matches(/^\d+(\.\d+)?$/, { message: 'Cooperation amount must be numeric' })
+  @IsNotEmpty()
+  amount!: string;
 
-  @IsOptional()
   @IsString()
-  currency?: string;
+  @IsNotEmpty()
+  currency!: string;
 
-  @IsOptional()
   @IsString()
-  paymentMethod?: string;
+  @IsNotEmpty()
+  paymentMethod!: string;
 
-  @IsOptional()
   @IsString()
-  homepage?: string;
-
   @IsOptional()
-  @IsString()
   remark?: string;
 }
 
