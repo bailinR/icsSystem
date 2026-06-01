@@ -2,6 +2,10 @@
 
 达人合作审批系统，技术栈为 Vue 3、NestJS、Prisma、MySQL。
 
+## 在线演示
+
+演示地址：http://ics.bailin.xyz/
+
 ## Quick Start
 
 ```powershell
